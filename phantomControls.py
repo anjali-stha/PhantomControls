@@ -1,6 +1,6 @@
 import mediapipe as mp
 import cv2
-import pyautogui
+import pydirectinput
 
 mpDraw = mp.solutions.drawing_utils
 cap = cv2.VideoCapture(0)
@@ -15,22 +15,21 @@ shoot = False
 jump = False
 forward = False
 backward = False
-moving_left=False
-moving_right=False
-reload=False
-spike_controls=False
-stop=False
+moving_left = False
+moving_right = False
+reload = False
+spike_controls = False
+stop = False
 
 def reset_controls():
-    pyautogui.keyUp(5)
-    pyautogui.keyUp("space")
-    pyautogui.keyUp("w")
-    pyautogui.keyUp("s")
-    pyautogui.keyUp("a")
-    pyautogui.keyUp("d")
-    pyautogui.keyUp("r")
-    pyautogui.keyUp(4)
-
+    pydirectinput.keyUp(5)
+    pydirectinput.keyUp("space")
+    pydirectinput.keyUp("w")
+    pydirectinput.keyUp("s")
+    pydirectinput.keyUp("a")
+    pydirectinput.keyUp("d")
+    pydirectinput.keyUp("r")
+    pydirectinput.keyUp(4)
 
 while True:
     success, img = cap.read()
@@ -44,7 +43,6 @@ while True:
 
     # Initialize pose landmarks
     right_wrist_y = None
-    right_index_y = None
     left_wrist_y = None
     head_y = None
     right_hand_open = False
@@ -63,8 +61,6 @@ while True:
 
             if id == 16:  # Right wrist
                 right_wrist_y = cy
-            elif id == 18:  # Right index finger
-                right_index_y = cy
             elif id == 15:  # Left wrist
                 left_wrist_y = cy
             elif id == 0:  # Head
@@ -90,38 +86,37 @@ while True:
 
             wrist_y = landmarks[0].y * h
             index_tip_y = landmarks[8].y * h
+            thumb_tip_y = landmarks[4].y * h
             middle_tip_y = landmarks[12].y * h
             ring_tip_y = landmarks[16].y * h
             pinky_tip_y = landmarks[20].y * h
 
             hand_side = "right" if landmarks[0].x > 0.5 else "left"
 
-            # Determine if hand is open (all fingers extended above wrist)
+            # Check if the hand is open (fingers spread out and wrist low)
             is_hand_open = (
-                    index_tip_y < wrist_y and middle_tip_y < wrist_y and
-                    ring_tip_y < wrist_y and pinky_tip_y < wrist_y
+                index_tip_y < wrist_y and middle_tip_y < wrist_y and
+                ring_tip_y < wrist_y and pinky_tip_y < wrist_y
             )
 
-            # Moving Forward (Closed Fist - All fingers below wrist)
-            if (index_tip_y > wrist_y and middle_tip_y > wrist_y and
-                ring_tip_y > wrist_y and pinky_tip_y > wrist_y):
+            # Forward Gesture: Hand raised above head with open fingers
+            if thumb_tip_y < wrist_y and index_tip_y < wrist_y and is_hand_open:
                 if not forward:
-                    pyautogui.keyDown("w")
+                    pydirectinput.keyDown("w")
                     forward = True
             else:
                 if forward:
-                    pyautogui.keyUp("w")
+                    pydirectinput.keyUp("w")
                     forward = False
 
-            # Moving Backward (Open Palm - All fingers above wrist)
-            if (index_tip_y < wrist_y and middle_tip_y < wrist_y and
-                ring_tip_y < wrist_y and pinky_tip_y < wrist_y):
+            # Moving Backward (Thumbs Down Gesture)
+            if thumb_tip_y > wrist_y and index_tip_y > wrist_y:
                 if not backward:
-                    pyautogui.keyDown("s")
+                    pydirectinput.keyDown("s")
                     backward = True
             else:
                 if backward:
-                    pyautogui.keyUp("s")
+                    pydirectinput.keyUp("s")
                     backward = False
 
             # Assign to respective hand
@@ -136,46 +131,50 @@ while True:
                     continue
                 stop = False
 
-    #Move Left (Leaning Left)
+            thumb_tip_x = landmarks[4].x * w  # Thumb Tip X
+            thumb_tip_y = landmarks[4].y * h  # Thumb Tip Y
+            index_tip_x = landmarks[8].x * w  # Index Tip X
+            index_tip_y = landmarks[8].y * h  # Index Tip Y
+
+            # Check if thumb and index finger are close to each other (forming an "okay" sign)
+            if abs(thumb_tip_x - index_tip_x) < 20 and abs(thumb_tip_y - index_tip_y) < 20:
+                if not shoot:
+                    pydirectinput.keyDown("5")  # Trigger shooting action
+                    shoot = True
+            else:
+                if shoot:
+                    pydirectinput.keyUp("5")
+                    shoot = False
+
+    # Move Left (Leaning Left)
     if left_shoulder_y is not None and right_shoulder_y is not None:
         if left_shoulder_y > right_shoulder_y + 10:  # Tilt Left
-            pyautogui.keyDown("a")
+            pydirectinput.keyDown("a")
             moving_left = True
         else:
             if moving_left:
-                pyautogui.keyUp("a")
+                pydirectinput.keyUp("a")
                 moving_left = False
 
     # Move Right (Leaning Right)
     if left_shoulder_y is not None and right_shoulder_y is not None:
         if right_shoulder_y > left_shoulder_y + 10:  # Tilt Right
-            pyautogui.keyDown("d")
+            pydirectinput.keyDown("d")
             moving_right = True
         else:
             if moving_right:
-                pyautogui.keyUp("d")
+                pydirectinput.keyUp("d")
                 moving_right = False
-
-    # SHOOT (Raise Right Elbow Above Shoulder)
-    if right_elbow_y is not None and right_shoulder_y is not None:
-        if right_elbow_y < right_shoulder_y:  # Elbow above shoulder
-            if not shoot:
-                pyautogui.keyDown("5")
-                shoot = True
-        else:
-            if shoot:
-                pyautogui.keyUp("5")
-                shoot = False
 
     # RELOAD (Raise Left Elbow Above Shoulder)
     if left_elbow_y is not None and left_shoulder_y is not None:
         if left_elbow_y < left_shoulder_y:  # Elbow above shoulder
             if not reload:
-                pyautogui.keyDown("r")
+                pydirectinput.keyDown("r")
                 reload = True
         else:
             if reload:
-                pyautogui.keyUp("r")
+                pydirectinput.keyUp("r")
                 reload = False
 
     # SPIKE CONTROL (Left Hand Touching Right Elbow)
@@ -192,22 +191,22 @@ while True:
             # If left index finger is close to right elbow
             if abs(left_index_x - right_elbow_x) < 20 and abs(left_index_y - right_elbow_y) < 20:
                 if not spike_controls:
-                    pyautogui.keyDown("4")  # Example key for spike control
+                    pydirectinput.keyDown("4")  # Example key for spike control
                     spike_controls = True
             else:
                 if spike_controls:
-                    pyautogui.keyUp("4")
+                    pydirectinput.keyUp("4")
                     spike_controls = False
 
     # Jump Condition (Both hands above head)
     if head_y is not None and right_wrist_y is not None and left_wrist_y is not None:
         if right_wrist_y < head_y and left_wrist_y < head_y:  # Hands above head → JUMP
             if not jump:
-                pyautogui.keyDown("space")
+                pydirectinput.keyDown("space")
                 jump = True
         else:  # Stop jumping when hands lower
             if jump:
-                pyautogui.keyUp("space")
+                pydirectinput.keyUp("space")
                 jump = False
 
     cv2.imshow("Image", img)
