@@ -41,7 +41,6 @@ while True:
     results_pose = Pose.process(imgrgb)
     results_hands = hands.process(imgrgb)
 
-    # Initialize pose landmarks
     right_wrist_y = None
     left_wrist_y = None
     head_y = None
@@ -54,29 +53,29 @@ while True:
 
     if results_pose.pose_landmarks:
         mpDraw.draw_landmarks(img, results_pose.pose_landmarks, mpPose.POSE_CONNECTIONS)
-        h, w, c = img.shape  # Get image dimensions
+        h, w, c = img.shape 
 
         for id, lm in enumerate(results_pose.pose_landmarks.landmark):
             cx, cy = int(lm.x * w), int(lm.y * h)
 
-            if id == 16:  # Right wrist
+            if id == 16:  
                 right_wrist_y = cy
-            elif id == 15:  # Left wrist
+            elif id == 15:  
                 left_wrist_y = cy
-            elif id == 0:  # Head
+            elif id == 0: 
                 head_y = cy
-            elif id == 11:  # Left Shoulder
+            elif id == 11: 
                 left_shoulder_y = cy
-            elif id == 12:  # Right Shoulder
+            elif id == 12:  
                 right_shoulder_y = cy
-            if id == 14:  # Right Elbow
+            if id == 14: 
                 right_elbow_y = cy
-            elif id == 13:  # Left Elbow
+            elif id == 13:
                 left_elbow_y = cy
 
             cv2.circle(img, (cx, cy), 10, (255, 0, 0), cv2.FILLED)
 
-    # Process hands (finger gestures)
+    
     if results_hands.multi_hand_landmarks:
         for handLms in results_hands.multi_hand_landmarks:
             mpDraw.draw_landmarks(img, handLms, mpHands.HAND_CONNECTIONS)
@@ -93,13 +92,11 @@ while True:
 
             hand_side = "right" if landmarks[0].x > 0.5 else "left"
 
-            # Check if the hand is open (fingers spread out and wrist low)
             is_hand_open = (
                 index_tip_y < wrist_y and middle_tip_y < wrist_y and
                 ring_tip_y < wrist_y and pinky_tip_y < wrist_y
             )
 
-            # Forward Gesture: Hand raised above head with open fingers
             if thumb_tip_y < wrist_y and index_tip_y < wrist_y and is_hand_open:
                 if not forward:
                     pydirectinput.keyDown("w")
@@ -109,7 +106,6 @@ while True:
                     pydirectinput.keyUp("w")
                     forward = False
 
-            # Moving Backward (Thumbs Down Gesture)
             if thumb_tip_y > wrist_y and index_tip_y > wrist_y:
                 if not backward:
                     pydirectinput.keyDown("s")
@@ -119,7 +115,6 @@ while True:
                     pydirectinput.keyUp("s")
                     backward = False
 
-            # Assign to respective hand
             if hand_side == "right":
                 right_hand_open = is_hand_open
             else:
@@ -131,22 +126,20 @@ while True:
                     continue
                 stop = False
 
-            thumb_tip_x = landmarks[4].x * w  # Thumb Tip X
-            thumb_tip_y = landmarks[4].y * h  # Thumb Tip Y
-            index_tip_x = landmarks[8].x * w  # Index Tip X
-            index_tip_y = landmarks[8].y * h  # Index Tip Y
+            thumb_tip_x = landmarks[4].x * w  
+            thumb_tip_y = landmarks[4].y * h 
+            index_tip_x = landmarks[8].x * w  
+            index_tip_y = landmarks[8].y * h  
 
-            # Check if thumb and index finger are close to each other (forming an "okay" sign)
             if abs(thumb_tip_x - index_tip_x) < 20 and abs(thumb_tip_y - index_tip_y) < 20:
                 if not shoot:
-                    pydirectinput.keyDown("5")  # Trigger shooting action
-                    shoot = True
+                    pydirectinput.keyDown("5")  
             else:
                 if shoot:
                     pydirectinput.keyUp("5")
                     shoot = False
 
-    # Move Left (Leaning Left)
+    
     if left_shoulder_y is not None and right_shoulder_y is not None:
         if left_shoulder_y > right_shoulder_y + 10:  # Tilt Left
             pydirectinput.keyDown("a")
@@ -156,7 +149,7 @@ while True:
                 pydirectinput.keyUp("a")
                 moving_left = False
 
-    # Move Right (Leaning Right)
+    
     if left_shoulder_y is not None and right_shoulder_y is not None:
         if right_shoulder_y > left_shoulder_y + 10:  # Tilt Right
             pydirectinput.keyDown("d")
@@ -166,7 +159,7 @@ while True:
                 pydirectinput.keyUp("d")
                 moving_right = False
 
-    # RELOAD (Raise Left Elbow Above Shoulder)
+    
     if left_elbow_y is not None and left_shoulder_y is not None:
         if left_elbow_y < left_shoulder_y:  # Elbow above shoulder
             if not reload:
@@ -177,34 +170,31 @@ while True:
                 pydirectinput.keyUp("r")
                 reload = False
 
-    # SPIKE CONTROL (Left Hand Touching Right Elbow)
     if results_hands.multi_hand_landmarks:
         for handLms in results_hands.multi_hand_landmarks:
             landmarks = handLms.landmark
 
-            left_index_x = landmarks[8].x * w  # Left Index Finger X
-            left_index_y = landmarks[8].y * h  # Left Index Finger Y
+            left_index_x = landmarks[8].x * w  
+            left_index_y = landmarks[8].y * h  
 
-            right_elbow_x = results_pose.pose_landmarks.landmark[14].x * w  # Right Elbow X
-            right_elbow_y = results_pose.pose_landmarks.landmark[14].y * h  # Right Elbow Y
-
-            # If left index finger is close to right elbow
+            right_elbow_x = results_pose.pose_landmarks.landmark[14].x * w  
+            right_elbow_y = results_pose.pose_landmarks.landmark[14].y * h  
+            
             if abs(left_index_x - right_elbow_x) < 20 and abs(left_index_y - right_elbow_y) < 20:
                 if not spike_controls:
-                    pydirectinput.keyDown("4")  # Example key for spike control
+                    pydirectinput.keyDown("4")  
                     spike_controls = True
             else:
                 if spike_controls:
                     pydirectinput.keyUp("4")
                     spike_controls = False
 
-    # Jump Condition (Both hands above head)
     if head_y is not None and right_wrist_y is not None and left_wrist_y is not None:
-        if right_wrist_y < head_y and left_wrist_y < head_y:  # Hands above head → JUMP
+        if right_wrist_y < head_y and left_wrist_y < head_y:  
             if not jump:
                 pydirectinput.keyDown("space")
                 jump = True
-        else:  # Stop jumping when hands lower
+        else:  
             if jump:
                 pydirectinput.keyUp("space")
                 jump = False
