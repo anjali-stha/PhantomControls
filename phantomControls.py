@@ -174,16 +174,15 @@ while True:
         for handLms in results_hands.multi_hand_landmarks:
             landmarks = handLms.landmark
 
-            left_index_x = landmarks[8].x * w  # Left Index Finger X
-            left_index_y = landmarks[8].y * h  # Left Index Finger Y
+            left_index_x = landmarks[8].x * w  
+            left_index_y = landmarks[8].y * h  
 
-            right_elbow_x = results_pose.pose_landmarks.landmark[14].x * w  # Right Elbow X
-            right_elbow_y = results_pose.pose_landmarks.landmark[14].y * h  # Right Elbow Y
+            right_elbow_x = results_pose.pose_landmarks.landmark[14].x * w  
+            right_elbow_y = results_pose.pose_landmarks.landmark[14].y * h  
 
-            # If left index finger is close to right elbow
             if abs(left_index_x - right_elbow_x) < 20 and abs(left_index_y - right_elbow_y) < 20:
                 if not spike_controls:
-                    pydirectinput.keyDown("4")  # Example key for spike control
+                    pydirectinput.keyDown("4")  
                     spike_controls = True
             else:
                 if spike_controls:
